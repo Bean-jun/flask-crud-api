@@ -1,0 +1,23 @@
+[project]
+name = "flask-crud-api"
+version = "0.0.1"
+description = "基于flask快速、优雅实现restful接口"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "flask>=3.1.0",
+    "flask-migrate>=4.1.0",
+    "openpyxl>=3.1.5",
+    "sqlalchemy>=2.0.40",
+]
+[[tool.uv.index]]
+url = "https://mirrors.aliyun.com/pypi/simple"
+default = true
+
+[dependency-groups]
+dev = [
+    "gevent>=25.4.2",
+]
+[tool.setuptools.package-data]
+"flask_crud_api.static" = ["*", "**/*"]
+"flask_crud_api.templates" = ["*", "**/*"]
