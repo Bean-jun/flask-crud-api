@@ -1,52 +1,106 @@
 # flask-crud-api
 
-本库旨在帮助后端开发人员快速构建一个基于`flask`框架的后端项目。
+<a style='text-align=center'>[中文文档](./README_ZH.md)</a>
 
-## 参数说明
+A Flask-based RESTful API framework designed to help backend developers quickly build efficient and elegant CRUD APIs.
 
-1. 分页相关
+## Features
+
+- Rapid CRUD API Development
+- Built-in Pagination, Filtering, and Sorting
+- Swagger/OpenAPI Documentation Support
+- Clean and Elegant API Design
+
+## Installation
+
+1. Ensure Python version ≥ 3.9
+2. Install dependencies:
+```bash
+pip install -e .
+```
+3. Additional dependencies for development:
+```bash
+pip install -e .[dev]
+```
+
+## Quick Start
+
+1. Create a Flask application and initialize the API:
+```python
+from flask import Flask
+from flask_crud_api.api import SimpleApi
+
+app = Flask(__name__)
+app.config["DB_URL"] = "sqlite:///main.db"
+SimpleApi(app)
+```
+
+2. Define models and create tables:
+```python
+from sqlalchemy import Column, Integer, String
+from flask_crud_api.models import BaseModel
+
+class User(BaseModel):
+    __tablename__ = 'users'
+    id = Column(Integer, primary_key=True)
+    name = Column(String(50))
+```
+
+## API Documentation
+
+Access Swagger documentation at `/_docs` after starting the service.
+
+## Parameter Guide
+
+1. Pagination Parameters
 
 ```shell
-__page 页码
-__page_size 每页数量
+__page         # Page number
+__page_size    # Items per page
 
-# 如果需要禁用分页，可以使用此字段，请谨慎使用
+# Use this parameter to disable pagination (use with caution)
 __page_disable
 ```
 
-2. 添加、修改数据字段
+2. Data Creation and Modification Fields
 
 ```shell
-# 鉴于开发时，一次查询将会给出对应的字段模型及相关解释
-# 创建、修改数据时可以使用此字段
+# Field models and explanations will be provided during development
+# Use these fields when creating or modifying data
 ```
 
-3. 过滤字段
+3. Filter Fields
 
 ```shell
-# 这部分字段请结合实际在后端代码中添加需要被过滤的字段内容
+# Configure filter fields in backend code based on requirements
 
-# 例如：
+# Example:
 view_filter_fields = (("pk", "="),)
 view_filters = (SearchFilter, )
 ```
 
-4. 排序字段
+4. Sorting Fields
 
 ```python
-# 如果需要进行排序，请配置view_order_fields、view_filters
+# Configure view_order_fields and view_filters for sorting
 """
 view_order_fields = (("__order_pk", 'desc'), )
 view_filters = (OrderFilter, ...)
 """
 
-# 例如
+# Example:
 view_order_fields = (
     ("__order_pk", 'desc'), 
     ("__order_pk", 'asc'), 
 )
 view_filters = (SearchFilter, OrderFilter)
 
-# 传递query参数 __order_pk=asc 即可实现pk的升序
-# 传递query参数 __order_pk=desc 即可实现pk的降序
+# Use __order_pk=asc for ascending order by primary key
+# Use __order_pk=desc for descending order by primary key
 ```
+
+## Contributing
+
+1. Fork the project
+2. Create a feature branch
+3. Submit a Pull Request
