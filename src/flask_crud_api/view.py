@@ -3,10 +3,8 @@ import typing as t
 
 from flask import current_app, views, request
 from flask import abort
-from sqlalchemy import DateTime as SaDateTime
-from flask_crud_api.orm import Orm
+from flask_crud_api.orm import Orm, Serializer
 
-from flask_crud_api import utils
 from flask_crud_api.response import ok_response
 from flask_crud_api.router import is_extra_action
 from flask_crud_api.filter import PageFilter, SearchFilter, OrderFilter
@@ -61,48 +59,13 @@ class ViewMixin:
         super().__init__(*args, **kwargs)
         self.model = model_class
         self.orm = Orm()
+        self.serializer = Serializer(self)
 
     def from_serializer(self, model, serializer=None):
-        if serializer is None:
-            serializer = dict()
+        return self.serializer.from_serializer(model, serializer)
 
-        if inspect.isclass(model):
-            model = model()
-
-        columns = model.metadata.tables.get(model.__tablename__).columns
-        column_types = {column.key: column.type for column in columns}
-        for key, value in serializer.items():
-            if key in column_types:
-                setattr(model, key, value)
-                if isinstance(column_types[key], SaDateTime):
-                    setattr(model, key, utils.str2datetime(value))
-        return model
-
-    def to_serializer(self, query, count=1, hooks=None):
-        if hooks is None:
-            hooks = self.serializer_hooks
-
-        if not isinstance(hooks, (list, tuple)):
-            hooks = [hooks]
-
-        if not isinstance(query, (list, tuple)):
-            query = [query]
-
-        result = []
-        for _query in query:
-            _dict = _query.to_dict()
-
-            for hook in hooks:
-                _dict = hook(_dict)
-
-            result.append(_dict)
-
-        return ok_response(
-            {
-                "count": count,
-                "result": result,
-            }
-        )
+    def to_serializer(self, query, count=1, hooks=None, exclude=None):
+        return self.serializer.to_serializer(query, count, hooks, exclude)
 
     def query_filter(self, stmt):
         if not self.view_filters:

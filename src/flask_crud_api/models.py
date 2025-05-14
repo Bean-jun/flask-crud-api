@@ -11,6 +11,9 @@ class State:
     Valid = 1
     Invalid = 2
 
+# orm 默认屏蔽字段
+orm_default_exclude = {"delete_time", "state"}
+
 
 class BaseModel(Base):
     __abstract__ = True
@@ -28,7 +31,7 @@ class BaseModel(Base):
 
     def to_dict(self, exclude=None):
         if exclude is None:
-            exclude = {"delete_time", "state"}
+            exclude = orm_default_exclude
 
         result = {
             column.name: getattr(self, column.name)
