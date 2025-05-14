@@ -3,4 +3,4 @@ dev = True
 
 # 服务器主机&端口配置
 hostname = "0.0.0.0"
-hostport = 5005
+hostport = 7256

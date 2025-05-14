@@ -10,6 +10,14 @@ def init_app(app: Flask):
     from .api import (
         HTTPModelView,
         HTTPModelDetailView,
+        UserModelView,
+        UserModelDetailView,
+    )
+
+    router.add_url_rule("/user", view_cls=UserModelView)
+    router.add_url_rule(
+        "/user/<int:pk>",
+        view_cls=UserModelDetailView,
     )
 
     router.add_url_rule("/http", view_cls=HTTPModelView)

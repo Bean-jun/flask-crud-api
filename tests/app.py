@@ -16,6 +16,7 @@ def init_api(app: Flask):
 def create_app():
     app = Flask(__name__)
     app.config["DB_URL"] = "sqlite:///main.db"
+    app.config["DB_DEBUG"] = True
     SimpleApi(app)
 
     from models import create_tables
