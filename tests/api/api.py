@@ -11,6 +11,7 @@ from .hooks import hook_http_model_user, hook_http_model_user_no_N_ADD_ONE
 
 
 class UserModelView(CommonView):
+    """用户"""
     def __init__(self):
         super().__init__(UserModel)
 
@@ -23,6 +24,7 @@ class UserModelView(CommonView):
 
 
 class UserModelDetailView(CommonDetailView):
+    """用户明细"""
     def __init__(self):
         super().__init__(UserModel)
 
@@ -39,9 +41,14 @@ class HTTPModelView(CommonView):
 
     def __init__(self):
         super().__init__(HTTPModel)
+    
+    def get(self, *args, **kwargs):
+        """获取HTTP记录"""
+        return super().get(*args, **kwargs)
 
     @action()
     def get_userinfo_no_N_ADD_ONE(self):
+        """尝试解决N+1查询问题"""
         stmt = self.orm.get_queryset(self.model, UserModel)
         stmt = self.query_filter(stmt)
         stmt = self.query_page_filter(stmt)
@@ -57,6 +64,7 @@ class HTTPModelView(CommonView):
 
     @action()
     def get_patch(self):
+        """获取部分数据内容"""
         stmt = select(
             self.model.path.label("path"),
             self.model.method.label("method"),
