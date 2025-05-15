@@ -40,11 +40,13 @@ class ViewRouterMixin:
             for decorator in cls.decorators:
                 view = decorator(view)
 
+        view.action = action
         view.view_class = cls
         view.__name__ = f"{cls.__name__}_{action.__name__}"
         view.__doc__ = cls.__doc__
         view.__module__ = cls.__module__
-        view.methods = cls.methods
+        # view.methods = cls.methods
+        view.methods = set(action.mapping.keys())
         view.provide_automatic_options = cls.provide_automatic_options
         return view
 
