@@ -1,4 +1,5 @@
-from flask import Flask, g
+import os
+from flask import Blueprint, Flask, g
 from flask.json.provider import DefaultJSONProvider
 
 import dataclasses
@@ -59,47 +60,53 @@ class APIFlaskJSONProvider(DefaultJSONProvider):
     default = staticmethod(_default)
 
 
-class SimpleApi:
+class CrudApi:
 
     def __init__(self, app=None):
         if app is None:
             return
-        self.init_app(app)
+
+        self.app = app
+        self.init_app(self.app)
 
     def init_app(self, app: Flask):
+        self.app = app
         app.json = APIFlaskJSONProvider(app)
 
+        self.init_db_tools()
+        self.init_hooks()
+        self.init_api_docs()
+
+    def init_db_tools(self):
         # sqlalchemy 兼容 flask_migrate
         global engine, session_factory
         from .models import Base, create_tables
         from flask_migrate import Migrate
 
-        if "DB_URL" not in app.config:
+        if "DB_URL" not in self.app.config:
             raise Exception("DB_URL NOT CONFIGURATION!")
 
         engine = create_engine(
-            app.config["DB_URL"], echo=app.config.get("DB_DEBUG", False)
+            self.app.config["DB_URL"], echo=self.app.config.get("DB_DEBUG", False)
         )
         session_factory = sessionmaker(bind=engine)
         create_tables(engine)
 
         setattr(session_factory, "engine", engine)
         setattr(session_factory, "metadata", Base.metadata)
-        Migrate().init_app(app, session_factory)
+        Migrate().init_app(self.app, session_factory)
 
-        InitializeRequest(app)
+    def init_hooks(self):
+        InitializeRequest(self.app)
 
-        from flask import Blueprint
-        import pathlib
-        import os
-
+    def init_api_docs(self):
         path = os.path.dirname(os.path.abspath(__file__))
         _api_docs = Blueprint(
             "_api_docs",
             __name__,
             static_folder=os.path.join(path, "static"),
             template_folder=os.path.join(path, "templates"),
-            url_prefix="/_docs"
+            url_prefix="/_docs",
         )
 
         @_api_docs.get("/")
@@ -108,4 +115,8 @@ class SimpleApi:
 
             return render_template("index.html")
 
-        app.register_blueprint(_api_docs)
+        self.app.register_blueprint(_api_docs)
+
+
+# 兼容0.0.1版本写法，后续版本中将移除
+SimpleApi = CrudApi
