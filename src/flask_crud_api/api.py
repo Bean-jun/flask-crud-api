@@ -115,6 +115,11 @@ class CrudApi:
 
             return render_template("index.html")
 
+        @_api_docs.get("/openapi.json")
+        def __openapi():
+            from flask_crud_api._openapi import render_api
+            return render_api(self.app)
+
         self.app.register_blueprint(_api_docs)
 
 
