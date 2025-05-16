@@ -1,9 +1,12 @@
 import re
+import inspect
+import itertools
 
 from flask import Flask
+from flask.views import http_method_funcs
 from werkzeug.routing.rules import Rule
+
 from flask_crud_api.__version__ import version
-from flask_crud_api.decorator import Swagger
 
 
 default_exclude = {"/_docs/", "/static/"}
@@ -30,7 +33,90 @@ _part_re = re.compile(
 )
 
 
-class _Swagger:
+class Swagger:
+
+    Key = "_swagger"
+
+    def __init__(
+        self,
+        tags=None,
+        summary="",
+        deprecated=False,
+        description="",
+        parameters="",
+    ):
+        if tags is None:
+            tags = []
+        self.tags = tags if isinstance(tags, (tuple, list)) else [tags]
+        self.summary = summary
+        self.deprecated = deprecated
+        self.description = description
+        self.parameters = self._init_user_parameters(parameters)
+
+    def _get_api_members(self, f):
+        if not inspect.isclass(f):
+            return
+
+        from flask_crud_api.router import is_extra_action
+
+        methods = []
+        for m in http_method_funcs:
+            if hasattr(f, m):
+                methods.append(getattr(f, m))
+        for _, m in inspect.getmembers(f, is_extra_action):
+            methods.append(m)
+
+        for m in methods:
+            if not hasattr(m, self.Key):
+                setattr(m, self.Key, self)
+            else:
+                # TODO: 做一个更新合并
+                _m_member_swagger = getattr(m, self.Key)
+                _m_member_swagger.tags.extend(self.tags)
+                _m_member_swagger.parameters.extend(self.parameters)
+            
+    def _init_user_parameters(self, parameters=None):
+        if parameters is None:
+            return []
+        # TODO: 完善用户传入参数初始化
+
+    def _init_parameters(self, f):
+        if not inspect.isclass(f):
+            return
+        from flask_crud_api.filter import OrderFilter, SearchFilter
+
+        search_list = SearchFilter().get_default_filter(f)
+        order_list = OrderFilter().get_default_order(f)
+
+        parameters = []
+        # TODO: 需要完善
+        for param, _action in itertools.chain(search_list, order_list):
+            parameters.append(
+                {
+                    "name": param,
+                    "in": "query",
+                    "description": param,  # TODO: 描述
+                    "required": False,
+                    "example": _action, # TODO: 例子
+                    "schema": {"type": "string"},  # TODO: 类型
+                }
+            )
+        self.parameters.extend(parameters)
+        print(f)
+
+    def __call__(self, f):
+        # TODO: 若用户没有设置初始值，需要完善一下
+        self._init_parameters(f)
+
+        # 默认用户所有的接口都使用这个装饰器
+        setattr(f, self.Key, self)
+
+        # 为当前类所有方法赋值类的swagger信息
+        self._get_api_members(f)
+        return f
+
+
+class _SwaggerBuilder:
 
     def __init__(self, app: Flask):
         self.app = app
@@ -125,6 +211,9 @@ class _Swagger:
                     else:
                         swagger = getattr(view.view_class, _method)
 
+                    if not hasattr(swagger, self.swagger_key):
+                        swagger = view.view_class
+
                 methods[_method] = self._build_path(swagger, parameters)
 
         return api_path
@@ -143,7 +232,7 @@ class _Swagger:
 
         if hasattr(swagger, self.swagger_key):
             _swagger = getattr(swagger, self.swagger_key)
-            res_tags.extend([_swagger.tags])
+            res_tags.extend(_swagger.tags)
             res_summary = _swagger.summary
             res_deprecated = _swagger.deprecated
             res_description = _swagger.description
@@ -168,5 +257,5 @@ def render_api(app: Flask, exclude=None):
     if exclude is None:
         exclude = default_exclude
 
-    swagger = _Swagger(app)
+    swagger = _SwaggerBuilder(app)
     return swagger.builder(exclude)
