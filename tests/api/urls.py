@@ -12,6 +12,7 @@ def init_app(app: Flask):
         HTTPModelDetailView,
         UserModelView,
         UserModelDetailView,
+        UserHttpModelDetailView,
     )
 
     router.add_url_rule("/user", view_cls=UserModelView)
@@ -25,4 +26,7 @@ def init_app(app: Flask):
         "/http/<int:pk>",
         view_cls=HTTPModelDetailView,
     )
+
+    router.add_url_rule("/user/<int:pk>/http/<int:http_pk>", view_cls=UserHttpModelDetailView)
+    
     app.register_blueprint(bp)
