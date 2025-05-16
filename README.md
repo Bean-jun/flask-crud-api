@@ -16,7 +16,7 @@ A Flask-based RESTful API framework designed to help backend developers quickly 
 1. Ensure Python version ≥ 3.9
 2. Install dependencies:
 ```bash
-pip install -e .
+pip install flask-crud-api
 ```
 3. Additional dependencies for development:
 ```bash
@@ -28,11 +28,11 @@ pip install -e .[dev]
 1. Create a Flask application and initialize the API:
 ```python
 from flask import Flask
-from flask_crud_api.api import SimpleApi
+from flask_crud_api.api import CrudApi
 
 app = Flask(__name__)
 app.config["DB_URL"] = "sqlite:///main.db"
-SimpleApi(app)
+CrudApi(app)
 ```
 
 2. Define models and create tables:
@@ -42,7 +42,7 @@ from flask_crud_api.models import BaseModel
 
 class User(BaseModel):
     __tablename__ = 'users'
-    id = Column(Integer, primary_key=True)
+
     name = Column(String(50))
 ```
 

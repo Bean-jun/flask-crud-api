@@ -14,7 +14,7 @@
 1. 确保Python版本 ≥ 3.9
 2. 安装依赖：
 ```bash
-pip install -e .
+pip install flask-crud-api
 ```
 3. 安装开发环境依赖（可选）：
 ```bash
@@ -26,11 +26,11 @@ pip install -e .[dev]
 1. 创建Flask应用并初始化API：
 ```python
 from flask import Flask
-from flask_crud_api.api import SimpleApi
+from flask_crud_api.api import CrudApi
 
 app = Flask(__name__)
 app.config["DB_URL"] = "sqlite:///main.db"  # 配置数据库连接
-SimpleApi(app)
+CrudApi(app)
 ```
 
 2. 定义模型并创建数据表：
@@ -40,7 +40,7 @@ from flask_crud_api.models import BaseModel
 
 class User(BaseModel):
     __tablename__ = 'users'
-    id = Column(Integer, primary_key=True)
+
     name = Column(String(50))
 ```
 
