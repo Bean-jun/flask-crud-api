@@ -1,9 +1,17 @@
+import re
+
 from flask import Flask
 from werkzeug.routing.rules import Rule
 from flask_crud_api.__version__ import version
 
 
 default_exclude = {"/_docs/", "/static/"}
+agrs_map = {
+    "path": "string",
+    "uuid": "string",
+    "int": "integer",
+    "float": "number",
+}
 templates = {
     "openapi": "3.0.1",
     "info": {"title": "flask crud api", "description": "", "version": version},
@@ -14,30 +22,55 @@ templates = {
     "security": [],
 }
 
+_part_re = re.compile(
+    r"""
+    <
+    (?:
+        (?P<converter>[a-zA-Z_][a-zA-Z0-9_]*)   # converter name
+        (?:\((?P<arguments>.*?)\))?             # converter arguments
+        :                                       # variable delimiter
+    )?
+    (?P<variable>[a-zA-Z_][a-zA-Z0-9_]*)      # variable name
+    >
+    """,
+    re.VERBOSE,
+)
+
 
 def make_openapi_rule(rule: Rule):
-    if ":" not in rule.rule:
+    if ":" not in rule.rule or "<" not in rule.rule:
         return rule.rule, []
 
-    # TODO: 这里的逻辑需要好好处理一下, 先这样写，实现基本功能
-    rule_list = rule.rule.split("/")
     valid_rule_list = []
-    for _rule in rule_list:
-        if not _rule.startswith("<"):
+    valid_rule_path = []
+    for compile, _rule in zip(rule._parse_rule(rule.rule), rule.rule.split("/")):
+        if compile.static:
             valid_rule_list.append(_rule)
-        else:
-            for argument in rule.arguments:
-                if argument in _rule:
-                    valid_rule_list.append("{" + argument + "}")
+            continue
+
+        match = _part_re.match(_rule)
+        if match is None:
+            raise
+
+        data = match.groupdict()
+        if data["variable"] is not None:
+            valid_rule_path.append(
+                {
+                    "name": data["variable"],
+                    "type": agrs_map.get(data["converter"], "string"),
+                }
+            )
+            valid_rule_list.append("{" + data["variable"] + "}")
+
     return "/".join(valid_rule_list), [
         {
-            "name": argument,
+            "name": argument["name"],
             "in": "path",
             "description": "",
             "required": True,
-            "schema": {"type": "integer"},
+            "schema": {"type": argument["type"]},
         }
-        for argument in rule.arguments
+        for argument in valid_rule_path
     ]
 
 
