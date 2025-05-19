@@ -11,7 +11,7 @@ from flask_crud_api.__version__ import version
 
 default_exclude = {"/_docs/", "/static/"}
 
-agrs_map = {
+args_map = {
     "path": "string",
     "uuid": "string",
     "int": "integer",
@@ -156,7 +156,7 @@ class _SwaggerBuilder:
                 valid_rule_path.append(
                     {
                         "name": data["variable"],
-                        "type": agrs_map.get(data["converter"], "string"),
+                        "type": args_map.get(data["converter"], "string"),
                     }
                 )
                 valid_rule_list.append("{" + data["variable"] + "}")
