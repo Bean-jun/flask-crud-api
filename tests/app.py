@@ -1,6 +1,7 @@
-from flask import Flask
-from flask_crud_api.api import SimpleApi
 import settings
+from flask import Flask
+
+from flask_crud_api.api import SimpleApi
 
 
 def init_api(app: Flask):
@@ -15,12 +16,15 @@ def init_api(app: Flask):
 
 def create_app():
     app = Flask(__name__)
-    app.config["DB_URL"] = "sqlite:///main.db"
-    app.config["DB_DEBUG"] = True
+    app.config["FLASK_CRUD_API_DB_URL"] = "sqlite:///main.db"
+    app.config["FLASK_CRUD_API_DB_DEBUG"] = True
+    app.config["FLASK_CRUD_API_OPEN_DOC_API"] = True
     SimpleApi(app)
 
     from models import create_tables
+
     from flask_crud_api.api import engine
+
     create_tables(engine)
 
     init_api(app)
