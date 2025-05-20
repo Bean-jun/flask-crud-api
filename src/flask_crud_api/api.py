@@ -1,20 +1,25 @@
-import os
-from flask import Blueprint, Flask, g
-from flask.json.provider import DefaultJSONProvider
-
 import dataclasses
+import datetime
 import decimal
+import os
 import uuid
 from datetime import date
-import datetime
 
+from flask import Blueprint, Flask, g
+from flask.json.provider import DefaultJSONProvider
 from sqlalchemy import Engine, create_engine
-from sqlalchemy.orm import Session
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 
 engine: Engine
 
 session_factory: Session
+
+CONFIG_KEY_PREFIX = "FLASK_CRUD_API"
+DEFAULT_CONFIG = {
+    f"{CONFIG_KEY_PREFIX}_DB_URL": "sqlite:///main.db",
+    f"{CONFIG_KEY_PREFIX}_DB_DEBUG": False,
+    f"{CONFIG_KEY_PREFIX}_OPEN_DOC_API": False,
+}
 
 
 def _default(o):
@@ -73,22 +78,25 @@ class CrudApi:
         self.app = app
         app.json = APIFlaskJSONProvider(app)
 
+        self.init_config()
         self.init_db_tools()
         self.init_hooks()
         self.init_api_docs()
 
+    def init_config(self):
+        for k, v in DEFAULT_CONFIG.items():
+            self.app.config.setdefault(k, v)
+
     def init_db_tools(self):
         # sqlalchemy 兼容 flask_migrate
         global engine, session_factory
-        from .models import Base, create_tables
         from flask_migrate import Migrate
 
-        if "DB_URL" not in self.app.config:
-            raise Exception("DB_URL NOT CONFIGURATION!")
+        from .models import Base, create_tables
 
-        engine = create_engine(
-            self.app.config["DB_URL"], echo=self.app.config.get("DB_DEBUG", False)
-        )
+        db_url = self.app.config[f"{CONFIG_KEY_PREFIX}_DB_URL"]
+        db_debug = self.app.config[f"{CONFIG_KEY_PREFIX}_DB_DEBUG"]
+        engine = create_engine(db_url, echo=db_debug)
         session_factory = sessionmaker(bind=engine)
         create_tables(engine)
 
@@ -100,6 +108,11 @@ class CrudApi:
         InitializeRequest(self.app)
 
     def init_api_docs(self):
+        open_api = self.app.config[f"{CONFIG_KEY_PREFIX}_OPEN_DOC_API"]
+
+        if not open_api:
+            return
+
         path = os.path.dirname(os.path.abspath(__file__))
         _api_docs = Blueprint(
             "_api_docs",
@@ -118,6 +131,7 @@ class CrudApi:
         @_api_docs.get("/openapi.json")
         def __openapi():
             from flask_crud_api._openapi import render_api
+
             return render_api(self.app)
 
         self.app.register_blueprint(_api_docs)

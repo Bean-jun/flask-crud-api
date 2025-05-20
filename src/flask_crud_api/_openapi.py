@@ -1,13 +1,12 @@
-import re
 import inspect
 import itertools
+import re
 
 from flask import Flask
 from flask.views import http_method_funcs
 from werkzeug.routing.rules import Rule
 
 from flask_crud_api.__version__ import version
-
 
 default_exclude = {"/_docs/", "/static/"}
 
@@ -74,11 +73,12 @@ class Swagger:
                 _m_member_swagger = getattr(m, self.Key)
                 _m_member_swagger.tags.extend(self.tags)
                 _m_member_swagger.parameters.extend(self.parameters)
-            
+
     def _init_user_parameters(self, parameters=None):
         if parameters is None:
             return []
         # TODO: 完善用户传入参数初始化
+        return []
 
     def _init_parameters(self, f):
         if not inspect.isclass(f):
@@ -97,7 +97,7 @@ class Swagger:
                     "in": "query",
                     "description": param,  # TODO: 描述
                     "required": False,
-                    "example": _action, # TODO: 例子
+                    "example": _action,  # TODO: 例子
                     "schema": {"type": "string"},  # TODO: 类型
                 }
             )
