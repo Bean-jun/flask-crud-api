@@ -43,6 +43,7 @@ class Swagger:
         deprecated=False,
         description="",
         parameters="",
+        login_required=False,
     ):
         if tags is None:
             tags = []
@@ -51,6 +52,7 @@ class Swagger:
         self.deprecated = deprecated
         self.description = description
         self.parameters = self._init_user_parameters(parameters)
+        self.login_required = login_required
 
     def _get_api_members(self, f):
         if not inspect.isclass(f):
@@ -125,10 +127,16 @@ class _SwaggerBuilder:
             "info": {"title": "flask crud api", "description": "", "version": version},
             # "tags": [{"name": "tag content"}],
             "paths": {},
-            "components": {"schemas": {}, "securitySchemes": {}},
+            "components": {
+                "schemas": {},
+                "securitySchemes": {
+                    "authorization": {"type": "http", "scheme": "bearer"}
+                },
+            },
             "servers": [],
             "security": [],
         }
+        self.templates_security_private = [{"authorization": []}]
         self.swagger_key = Swagger.Key
 
     def builder(self, exclude=None):
@@ -237,6 +245,7 @@ class _SwaggerBuilder:
             res_deprecated = _swagger.deprecated
             res_description = _swagger.description
             res_parameters.extend(_swagger.parameters)
+            res_security = self.templates_security_private if _swagger.login_required else []
         else:
             res_tags.extend([swagger.__name__])
             res_summary = swagger.__doc__
