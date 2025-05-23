@@ -10,3 +10,5 @@ wheels/
 .venv
 tests/*.db
 .idea/
+*.db
+.coverage

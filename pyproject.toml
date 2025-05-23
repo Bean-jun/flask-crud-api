@@ -17,6 +17,8 @@ default = true
 [dependency-groups]
 dev = [
     "gevent>=25.4.2",
+    "pytest>=8.3.5",
+    "pytest-cov>=6.1.1",
 ]
 [tool.setuptools.dynamic]
 version = {attr = "flask_crud_api.__version__.version"}
