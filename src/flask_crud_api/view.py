@@ -52,14 +52,23 @@ class ViewRouterMixin:
 
 
 class ViewMixin:
-    view_order_fields = (("__order_pk", 'asc'), )
+
+    pk = "pk"
+    model = None
+    view_order_fields = (("__order_pk", "asc"),)
     view_filters = (SearchFilter, OrderFilter)
     view_page = PageFilter
     serializer_hooks = ()
 
-    def __init__(self, model_class, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.model = model_class
+
+        if "model" in kwargs:
+            self.model = kwargs["model"]
+
+        if self.model is None:
+            raise Exception("model not is None")
+
         self.orm = Orm()
         self.serializer = Serializer(self)
 
@@ -94,30 +103,6 @@ class ViewMixin:
         stmt = self.orm.get_queryset(self.model)
         return stmt
 
-
-class CommonView(ViewRouterMixin, ViewMixin, views.MethodView):
-
-    def get(self, *args, **kwargs):
-        stmt = self.get_queryset()
-        stmt = self.query_filter(stmt)
-        stmt = self.query_page_filter(stmt)
-        result = self.orm.execute_all(stmt)
-        return self.to_serializer(result, self.get_count())
-
-    def post(self, *args, **kwargs):
-        data = dict(request.form)
-        instance = self.from_serializer(self.model, data)
-        instance = self.orm.execute_add(instance)
-        return self.to_serializer(instance)
-
-
-class CommonDetailView(ViewRouterMixin, ViewMixin, views.MethodView):
-
-    pk = "pk"
-
-    def __init__(self, model_class, *args, **kwargs):
-        super().__init__(model_class, *args, **kwargs)
-
     def get_pk(self, *args, **kwargs):
         if self.pk not in kwargs:
             return abort(404)
@@ -137,11 +122,36 @@ class CommonDetailView(ViewRouterMixin, ViewMixin, views.MethodView):
             return abort(404)
         return result
 
-    def get(self, *args, **kwargs):
+
+class ListViewMixin:
+
+    def list(self, *args, **kwargs):
+        stmt = self.get_queryset()
+        stmt = self.query_filter(stmt)
+        stmt = self.query_page_filter(stmt)
+        result = self.orm.execute_all(stmt)
+        return self.to_serializer(result, self.get_count())
+
+
+class CreateViewMixin:
+
+    def create(self, *args, **kwargs):
+        data = dict(request.form)
+        instance = self.from_serializer(self.model, data)
+        instance = self.orm.execute_add(instance)
+        return self.to_serializer(instance)
+
+
+class RetrieveViewMixin:
+
+    def retrive(self, *args, **kwargs):
         result = self.get_object_instance(*args, **kwargs)
         return self.to_serializer(result)
 
-    def post(self, *args, **kwargs):
+
+class UpdateViewMixin:
+
+    def update(self, *args, **kwargs):
         result = self.get_object_instance(*args, **kwargs)
 
         data = dict(request.form)
@@ -149,10 +159,43 @@ class CommonDetailView(ViewRouterMixin, ViewMixin, views.MethodView):
         instance = self.orm.execute_add(instance)
         return self.to_serializer(instance)
 
-    def put(self, *args, **kwargs):
-        return self.post(*args, **kwargs)
 
-    def delete(self, *args, **kwargs):
+class DestoryViewMixin:
+
+    def destory(self, *args, **kwargs):
         result = self.get_object_instance(*args, **kwargs)
         self.orm.execute_delete(result)
         return ok_response("删除成功")
+
+
+class CommonView(
+    ListViewMixin, CreateViewMixin, ViewRouterMixin, ViewMixin, views.MethodView
+):
+
+    def get(self, *args, **kwargs):
+        return self.list(*args, **kwargs)
+
+    def post(self, *args, **kwargs):
+        return self.create(*args, **kwargs)
+
+
+class CommonDetailView(
+    RetrieveViewMixin,
+    UpdateViewMixin,
+    DestoryViewMixin,
+    ViewRouterMixin,
+    ViewMixin,
+    views.MethodView,
+):
+
+    def get(self, *args, **kwargs):
+        return self.retrive(*args, **kwargs)
+
+    def post(self, *args, **kwargs):
+        return self.update(*args, **kwargs)
+
+    def put(self, *args, **kwargs):
+        return self.update(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        return self.destory(*args, **kwargs)
