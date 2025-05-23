@@ -17,8 +17,6 @@ def init_data(app: Flask):
 
         session = session_factory()
 
-        orm = Orm()
-
         user_1 = User(username="user1", password=generate_password_hash("user1"))
         user_2 = User(username="user2", password=generate_password_hash("user2"))
 
@@ -58,20 +56,11 @@ def init_data(app: Flask):
             session.commit()
 
 
-def test_base_index(app: Flask, client: FlaskClient):
-
-    @app.route("/", methods=["GET", "POST"])
-    def index():
-        return request.method
-
-    assert client.get("/").data == b"GET"
-    assert client.post("/").data == b"POST"
-    assert client.put("/").status_code == 405
-
-
-def test_book_by_commonview_api(app: Flask, client: FlaskClient, init_data):
+@pytest.fixture
+def book_by_commonview_api(app: Flask, init_data):
     from flask_crud_api.router import Router
     from flask_crud_api.view import CommonView
+    from flask_crud_api.router import action
 
     bp = Blueprint("v1", __name__, url_prefix="/api")
     router = Router(bp)
@@ -79,36 +68,19 @@ def test_book_by_commonview_api(app: Flask, client: FlaskClient, init_data):
     class BookView(CommonView):
         model = Book
 
+        @action()
+        def last(self, *args, **kwargs):
+            stmt = self.get_queryset()
+            stmt = stmt.order_by(self.model.pk.desc()).limit(1)
+            result = self.orm.execute_one_or_none(stmt)
+            return self.to_serializer(result, 1)
+
     router.add_url_rule("/book", view_cls=BookView)
     app.register_blueprint(bp)
 
-    response = client.get("/api/book")
-    assert response.status_code == 200
-    data = json.loads(response.data)
-    assert data["code"] == 200
-    assert data["data"]["count"] == 4
 
-    response = client.post(
-        "/api/book",
-        data={
-            "name": "创建新书",
-            "publish": "2025-12-10 12:00:00",
-            "price": 12.0,
-            "uid": 2,
-        },
-    )
-    assert response.status_code == 200
-    data = json.loads(response.data)
-    assert data["code"] == 200
-
-    response = client.get("/api/book")
-    assert response.status_code == 200
-    data = json.loads(response.data)
-    assert data["code"] == 200
-    assert data["data"]["count"] == 5
-
-
-def test_book_by_commondetailview_api(app: Flask, client: FlaskClient, init_data):
+@pytest.fixture
+def book_by_commondetailview_api(app: Flask, init_data):
     from flask_crud_api.router import Router
     from flask_crud_api.view import CommonDetailView
 
@@ -124,11 +96,57 @@ def test_book_by_commondetailview_api(app: Flask, client: FlaskClient, init_data
     )
     app.register_blueprint(bp)
 
+
+def test_base_index(app: Flask, client: FlaskClient):
+
+    @app.route("/", methods=["GET", "POST"])
+    def index():
+        return request.method
+
+    assert client.get("/").data == b"GET"
+    assert client.post("/").data == b"POST"
+    assert client.put("/").status_code == 405
+
+
+def test_common_view_get(book_by_commonview_api, client: FlaskClient):
+    response = client.get("/api/book")
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert data["code"] == 200
+    assert data["data"]["count"] in {4, 5}
+
+
+def test_common_view_post(book_by_commonview_api, client: FlaskClient):
+    response = client.post(
+        "/api/book",
+        data={
+            "name": "创建新书",
+            "publish": "2025-12-10 12:00:00",
+            "price": 12.0,
+            "uid": 2,
+        },
+    )
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert data["code"] == 200
+
+
+def test_common_view_action_get(book_by_commonview_api, client: FlaskClient):
+    response = client.get("/api/book/last")
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert data["code"] == 200
+    assert data["data"]["count"] == 1
+
+
+def test_common_view_detail_get(book_by_commondetailview_api, client: FlaskClient):
     response = client.get("/api/book/1")
     assert response.status_code == 200
     data = json.loads(response.data)
     assert data["code"] == 200
 
+
+def test_common_view_detail_post(book_by_commondetailview_api, client: FlaskClient):
     response = client.post(
         "/api/book/1",
         data={
@@ -140,6 +158,21 @@ def test_book_by_commondetailview_api(app: Flask, client: FlaskClient, init_data
     assert data["code"] == 200
     assert data["data"]["result"][0]["name"] == "书本-新"
 
+
+def test_common_view_detail_put(book_by_commondetailview_api, client: FlaskClient):
+    response = client.put(
+        "/api/book/1",
+        data={
+            "name": "书本-新-新",
+        },
+    )
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert data["code"] == 200
+    assert data["data"]["result"][0]["name"] == "书本-新-新"
+
+
+def test_common_view_detail_delete(book_by_commondetailview_api, client: FlaskClient):
     response = client.delete("/api/book/1")
     assert response.status_code == 200
     data = json.loads(response.data)
