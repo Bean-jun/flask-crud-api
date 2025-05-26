@@ -1,5 +1,6 @@
 from flask import request
 from sqlalchemy import Select
+from sqlalchemy import DateTime as SaDateTime
 from flask_crud_api.orm import get_delete_key, get_valid_stmt
 from flask_crud_api import utils
 
@@ -93,7 +94,6 @@ class SearchFilter(BaseFilter):
 
     search_field_name = "view_filter_fields"
     search_model_name = "model"
-    between_time_fields = {"create_time", "update_time", "entry_time"}
 
     def get_default_model(self, view):
         if not hasattr(view, self.search_model_name):
@@ -107,16 +107,21 @@ class SearchFilter(BaseFilter):
         fields = getattr(view, self.search_field_name)
         return fields
 
-    def make_conditions(self, filter_fields):
+    def make_conditions(self, model, filter_fields):
         conditions_args = {}
         conditions_ops = {}
         for field, op in filter_fields:
             if field not in request.args:
                 continue
+            
+            if not hasattr(model, field):
+                continue
+
             conditions_ops[f"_op_{field}"] = op
             if op == "between":
                 start, end = request.args[field].split(",")
-                if field in self.between_time_fields:
+                column = getattr(model, field)
+                if isinstance(column.type, SaDateTime):
                     conditions_args[field] = utils.str2datetime(
                         start
                     ), utils.str2datetime(end)
@@ -127,7 +132,7 @@ class SearchFilter(BaseFilter):
         return conditions_args, conditions_ops
 
     def make_filter(self, model, filter_fields, field_prefix=""):
-        conditions_args, conditions_ops = self.make_conditions(filter_fields)
+        conditions_args, conditions_ops = self.make_conditions(model, filter_fields)
 
         conditions = []
         for field, value in conditions_args.items():

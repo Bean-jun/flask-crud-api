@@ -68,6 +68,15 @@ def book_by_commonview_api(app: Flask, init_data):
     class BookView(CommonView):
         model = Book
 
+        view_order_fields = (
+            ("__order_pk", "desc"),
+            ("__order_publish", "desc"),
+        )
+        view_filter_fields = (
+            ("name", "regexp"),
+            ("publish", "between"),
+        )
+
         @action()
         def last(self, *args, **kwargs):
             stmt = self.get_queryset()
@@ -114,6 +123,26 @@ def test_common_view_get(book_by_commonview_api, client: FlaskClient):
     data = json.loads(response.data)
     assert data["code"] == 200
     assert data["data"]["count"] in {4, 5}
+
+def test_common_view_get_by_order(book_by_commonview_api, client: FlaskClient):
+    response = client.get("/api/book?__order_pk=desc")
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert data["code"] == 200
+    assert data["data"]["result"][0]["pk"] != 1
+
+
+def test_common_view_get_by_filter_name(book_by_commonview_api, client: FlaskClient):
+    response = client.get("/api/book?name=书本0")
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert data["code"] == 200
+
+def test_common_view_get_by_filter_publish(book_by_commonview_api, client: FlaskClient):
+    response = client.get("/api/book?publish=2025-05-23 12:00:00,2025-05-23 17:00:00")
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert data["code"] == 200
 
 
 def test_common_view_post(book_by_commonview_api, client: FlaskClient):
