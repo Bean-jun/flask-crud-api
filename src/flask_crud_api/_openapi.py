@@ -43,6 +43,7 @@ class Swagger:
         deprecated=False,
         description="",
         parameters="",
+        requestBody="",
         login_required=False,
     ):
         if tags is None:
@@ -52,6 +53,7 @@ class Swagger:
         self.deprecated = deprecated
         self.description = description
         self.parameters = self._init_user_parameters(parameters)
+        self.requestBody = self._init_user_requestBody(requestBody)
         self.login_required = login_required
 
     def _get_api_members(self, f):
@@ -82,6 +84,12 @@ class Swagger:
         # TODO: 完善用户传入参数初始化
         return []
 
+    def _init_user_requestBody(self, requestBody=None):
+        if requestBody is None:
+            return []
+        # TODO: 完善用户传入参数初始化
+        return []
+
     def _init_parameters(self, f):
         if not inspect.isclass(f):
             return
@@ -104,11 +112,26 @@ class Swagger:
                 }
             )
         self.parameters.extend(parameters)
-        print(f)
+
+    def _init_requestBody(self, f):
+        if not inspect.isclass(f):
+            return
+        if not getattr(f, "model"):
+            return
+
+        properties = {}
+        for column in f.model.__table__.columns:
+            properties[column.name] = {
+                "description": column.comment,
+                # "example": "",  # TODO: 例子
+                "type": "string",  # TODO: 类型
+            }
+        self.requestBody = properties
 
     def __call__(self, f):
         # TODO: 若用户没有设置初始值，需要完善一下
         self._init_parameters(f)
+        self._init_requestBody(f)
 
         # 默认用户所有的接口都使用这个装饰器
         setattr(f, self.Key, self)
@@ -235,6 +258,7 @@ class _SwaggerBuilder:
         res_description = ""
         res_tags = []
         res_parameters = parameters
+        res_body = {}
         res_responses = {}
         res_security = []
 
@@ -245,7 +269,10 @@ class _SwaggerBuilder:
             res_deprecated = _swagger.deprecated
             res_description = _swagger.description
             res_parameters.extend(_swagger.parameters)
-            res_security = self.templates_security_private if _swagger.login_required else []
+            res_body = _swagger.requestBody
+            res_security = (
+                self.templates_security_private if _swagger.login_required else []
+            )
         else:
             res_tags.extend([swagger.__name__])
             res_summary = swagger.__doc__
@@ -257,6 +284,13 @@ class _SwaggerBuilder:
             "description": res_description,
             "tags": res_tags,
             "parameters": res_parameters,
+            "requestBody": {
+                "content": {
+                    "multipart/form-data": {
+                        "schema": {"type": "object", "properties": res_body}
+                    }
+                }
+            },
             "responses": res_responses,
             "security": res_security,
         }

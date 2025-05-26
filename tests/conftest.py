@@ -11,7 +11,7 @@ from flask import Flask
 from flask.testing import FlaskClient
 
 
-from flask_crud_api.api import SimpleApi
+from flask_crud_api.api import CrudApi
 
 
 @pytest.fixture
@@ -21,7 +21,7 @@ def app():
     app.config["FLASK_CRUD_API_DB_URL"] = 'sqlite:///:memory:'
     app.config["FLASK_CRUD_API_DB_DEBUG"] = True
     app.config["FLASK_CRUD_API_OPEN_DOC_API"] = True
-    SimpleApi(app)
+    CrudApi(app)
 
     from models import create_tables
     from flask_crud_api.api import engine

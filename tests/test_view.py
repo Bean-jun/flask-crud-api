@@ -7,12 +7,9 @@ from flask.testing import FlaskClient
 
 from models import User, Book
 
-
-@pytest.fixture
-def init_data(app: Flask):
+def _init_data(app: Flask):
     with app.app_context():
 
-        from flask_crud_api.orm import Orm
         from flask_crud_api.api import session_factory
 
         session = session_factory()
@@ -55,6 +52,9 @@ def init_data(app: Flask):
             session.add(_book)
             session.commit()
 
+@pytest.fixture
+def init_data(app: Flask):
+    _init_data(app)
 
 @pytest.fixture
 def book_by_commonview_api(app: Flask, init_data):
