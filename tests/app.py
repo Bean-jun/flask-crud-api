@@ -15,7 +15,8 @@ from flask import Blueprint, Flask
 from flask_crud_api.api import CrudApi
 from flask_crud_api.router import Router, action
 from flask_crud_api.view import CommonView
-from flask_crud_api.decorator import swagger
+from flask_crud_api.decorator import swagger, Swagger
+from flask_crud_api.openapi import BodyParam, QueryParam
 
 app = Flask(__name__)
 # app.config["FLASK_CRUD_API_DB_URL"] = "sqlite:///main.db"
@@ -38,7 +39,15 @@ bp = Blueprint("v1", __name__, url_prefix="/api")
 router = Router(bp)
 
 
-@swagger()
+@Swagger(
+    parameters=[QueryParam("name", "书名过滤")],
+    requestBody=[
+        BodyParam("name", "书本名称", "月亮与六便士"),
+        BodyParam("price", "书本价格", 12.9)
+    ],
+    auto_find_body=True,
+    auto_find_params=True
+)
 class BookView(CommonView):
     model = Book
 
