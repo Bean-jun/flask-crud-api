@@ -1,12 +1,10 @@
-import inspect
-import itertools
 import re
 
 from flask import Flask
-from flask.views import http_method_funcs
 from werkzeug.routing.rules import Rule
 
 from flask_crud_api.__version__ import version
+from flask_crud_api.openapi import Swagger
 
 default_exclude = {"/_docs/", "/static/"}
 
@@ -30,115 +28,6 @@ _part_re = re.compile(
     """,
     re.VERBOSE,
 )
-
-
-class Swagger:
-
-    Key = "_swagger"
-
-    def __init__(
-        self,
-        tags=None,
-        summary="",
-        deprecated=False,
-        description="",
-        parameters="",
-        requestBody="",
-        login_required=False,
-    ):
-        if tags is None:
-            tags = []
-        self.tags = tags if isinstance(tags, (tuple, list)) else [tags]
-        self.summary = summary
-        self.deprecated = deprecated
-        self.description = description
-        self.parameters = self._init_user_parameters(parameters)
-        self.requestBody = self._init_user_requestBody(requestBody)
-        self.login_required = login_required
-
-    def _get_api_members(self, f):
-        if not inspect.isclass(f):
-            return
-
-        from flask_crud_api.router import is_extra_action
-
-        methods = []
-        for m in http_method_funcs:
-            if hasattr(f, m):
-                methods.append(getattr(f, m))
-        for _, m in inspect.getmembers(f, is_extra_action):
-            methods.append(m)
-
-        for m in methods:
-            if not hasattr(m, self.Key):
-                setattr(m, self.Key, self)
-            else:
-                # TODO: 做一个更新合并
-                _m_member_swagger = getattr(m, self.Key)
-                _m_member_swagger.tags.extend(self.tags)
-                _m_member_swagger.parameters.extend(self.parameters)
-
-    def _init_user_parameters(self, parameters=None):
-        if parameters is None:
-            return []
-        # TODO: 完善用户传入参数初始化
-        return []
-
-    def _init_user_requestBody(self, requestBody=None):
-        if requestBody is None:
-            return []
-        # TODO: 完善用户传入参数初始化
-        return []
-
-    def _init_parameters(self, f):
-        if not inspect.isclass(f):
-            return
-        from flask_crud_api.filter import OrderFilter, SearchFilter
-
-        search_list = SearchFilter().get_default_filter(f)
-        order_list = OrderFilter().get_default_order(f)
-
-        parameters = []
-        # TODO: 需要完善
-        for param, _action in itertools.chain(search_list, order_list):
-            parameters.append(
-                {
-                    "name": param,
-                    "in": "query",
-                    "description": param,  # TODO: 描述
-                    "required": False,
-                    "example": _action,  # TODO: 例子
-                    "schema": {"type": "string"},  # TODO: 类型
-                }
-            )
-        self.parameters.extend(parameters)
-
-    def _init_requestBody(self, f):
-        if not inspect.isclass(f):
-            return
-        if not getattr(f, "model"):
-            return
-
-        properties = {}
-        for column in f.model.__table__.columns:
-            properties[column.name] = {
-                "description": column.comment,
-                # "example": "",  # TODO: 例子
-                "type": "string",  # TODO: 类型
-            }
-        self.requestBody = properties
-
-    def __call__(self, f):
-        # TODO: 若用户没有设置初始值，需要完善一下
-        self._init_parameters(f)
-        self._init_requestBody(f)
-
-        # 默认用户所有的接口都使用这个装饰器
-        setattr(f, self.Key, self)
-
-        # 为当前类所有方法赋值类的swagger信息
-        self._get_api_members(f)
-        return f
 
 
 class _SwaggerBuilder:

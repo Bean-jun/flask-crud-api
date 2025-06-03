@@ -1,4 +1,4 @@
-from flask_crud_api._openapi import Swagger
+from flask_crud_api.openapi import Swagger
 
 
 swagger = Swagger
